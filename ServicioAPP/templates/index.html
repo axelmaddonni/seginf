@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href= "{{ url_for('static',filename='styles/index.css') }}">
+</head>
+<body>
+
+  <div class="container">  
+    <form id="contact" action="{{ url_for('submit') }}" method="post">
+      <h3>Certificados</h3>
+      <h4>online</h4>
+      <fieldset>
+        <input name="nombre" placeholder="Your name" type="text" tabindex="1" required autofocus>
+      </fieldset>
+      <!-- <fieldset> 
+         <input placeholder="Your Email Address" type="email" tabindex="2" required>
+      </fieldset> -->
+      <fieldset>
+        <input name="webSite" placeholder="Your Web Site" type="url" id="url" tabindex="4" required>
+      </fieldset>
+      <fieldset>
+        <button name="submit" type="submit" id="contact-submit" data-submit="...Sending">Submit</button>
+      </fieldset>
+      <p class="copyright">Designed by Grupo TP2</p>
+    </form>
+  </div>
+
+</body>
+</html>
