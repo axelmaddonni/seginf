@@ -1,0 +1,73 @@
+TimeStampToken ::= ContentInfo
+-- contentType is id-signedData ([CMS])
+-- content is SignedData ([CMS])
+
+The fields of type EncapsulatedContentInfo of the SignedData
+construct have the following meanings:
+eContentType is an object identifier that uniquely specifies the
+content type. For a time-stamp token it is defined as:
+id-ct-TSTInfo OBJECT IDENTIFIER ::= { iso(1) member-body(2)
+us(840) rsadsi(113549) pkcs(1) pkcs-9(9) smime(16) ct(1) 4}
+eContent is the content itself, carried as an octet string.
+The eContent SHALL be the DER-encoded value of TSTInfo.
+The time-stamp token MUST NOT contain any signatures other than the
+signature of the TSA. The certificate identifier (ESSCertID) of the
+TSA certificate MUST be included as a signerInfo attribute inside a
+SigningCertificate attribute.
+TSTInfo ::= SEQUENCE {
+version INTEGER { v1(1) },
+policy TSAPolicyId,
+messageImprint MessageImprint,
+-- MUST have the same value as the similar field in
+-- TimeStampReq
+serialNumber INTEGER,
+-- Time-Stamping users MUST be ready to accommodate integers
+-- up to 160 bits.
+genTime GeneralizedTime,
+accuracy Accuracy OPTIONAL,
+ordering BOOLEAN DEFAULT FALSE,
+nonce INTEGER OPTIONAL,
+-- MUST be present if the similar field was present
+-- in TimeStampReq. In that case it MUST have the same value.
+tsa [0] GeneralName OPTIONAL,
+extensions [1] IMPLICIT Extensions OPTIONAL }
+
+====================================================================================================
+
+Time-Stamp Protocol via HTTP
+This subsection specifies a means for conveying ASN.1-encoded
+messages for the protocol exchanges described in Section 2 and
+Appendix D via the HyperText Transfer Protocol.
+Two MIME objects are specified as follows.
+Content-Type: application/timestamp-query
+<<the ASN.1 DER-encoded Time-Stamp Request message>>
+Content-Type: application/timestamp-reply
+<<the ASN.1 DER-encoded Time-Stamp Response message>>
+These MIME objects can be sent and received using common HTTP
+processing engines over WWW links and provides a simple browser-
+server transport for Time-Stamp messages.
+Upon receiving a valid request, the server MUST respond with either a
+valid response with content type application/timestamp-response or
+with an HTTP error.
+
+=====================================================================================================
+
+Preguntas:
+
+-Como armar el timestamp token? en que momento se firma?
+-Mostrar la comunicacion entre app y api, esta bien?
+
+=====================================================================================================
+
+DER encoding
+
+from pyasn1.codec.der import encoder
+encoder.encode(request)
+
+genTime
+
+pyasn1.type.useful.GeneralizedTime
+useful.GeneralizedTime()
+useful.UTCTime()
+
+openssl ts
