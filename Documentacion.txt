@@ -52,22 +52,35 @@ with an HTTP error.
 
 =====================================================================================================
 
-Preguntas:
+myPDFSigner - Instalación
 
--Como armar el timestamp token? en que momento se firma?
--Mostrar la comunicacion entre app y api, esta bien?
+1) Descargar el archivo mypdfsigner_2.7.5-1_amd64.deb
+Link: https://www.kryptokoder.com/download.html (ver versión según SO)
+Luego instalarlo usando: (en UBUNTU)
+sudo gdebi mypdfsigner_2.7.5-1_amd64.deb
 
-=====================================================================================================
+2) Hacer lo mismo para el siguiente archivo: mypdfsigner-python_2.7.5-1_amd64.deb
+Link: https://www.kryptokoder.com/download.html (ver versión según SO)
+Luego instalarlo usando: (en UBUNTU)
+sudo gdebi mypdfsigner-python_2.7.5-1_amd64.deb
 
-DER encoding
 
-from pyasn1.codec.der import encoder
-encoder.encode(request)
+3) Creación de certificado
+openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+openssl x509 -text -noout -in certificate.pem
+openssl pkcs12 -inkey key.pem -in certificate.pem -export -out certificate.p12
+openssl pkcs12 -in certificate.p12 -noout -info
 
-genTime
+Seguir todos los pasos, el nombre que definan en CN (Common Name) es el que aparece en la firma del PDF.
 
-pyasn1.type.useful.GeneralizedTime
-useful.GeneralizedTime()
-useful.UTCTime()
+4) Configurar MyPDFSigner:
+- Abrir myPdfSigner (la interfaz gráfica)
+- Seleccionar PKCS12 KeyStore File y hacer click en Change
+- Elegir el archivo .p12 que se generó cuando creamos el certificado. Ingresar la password y seleccionar un alias cualquiera del dropdown.
+- Hacer click en Profile y completar con el path de la imagen. La ubicación para que aparezca al final a la derecha es: [-170 40 -40 80]. La imagen tiene que estar en formato png con color RGBA.
+- Habilitar el TimeStamping escribiendo la url de la tsa. Por ahora usamos la de prueba: https://freetsa.org/tsr sin usuario ni password. Habilitarla. 
+- Cerrar y verificar que se haya creado un archivo llamado .mypdfsigner en tu home.
 
-openssl ts
+Con eso debería poder ejecutar el código de la api del usuario con el time stamp de la free TSA y firmando con el certificado auto firmado que generamos.
+
+
