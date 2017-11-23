@@ -7,7 +7,7 @@ __all__ = (
     'TimeStampReq', 'MessageImprint', 'PKIFreeText', 'PKIStatus', 'PKIFailureInfo',
     'PKIStatusInfo', 'TimeStampResp', 'Accuracy', 'AnotherName', 'GeneralName',
     'TimeStampToken', 'TSTInfo',
-)
+ )
 
 # Constants
 
@@ -53,6 +53,19 @@ class TimeStampReq(univ.Sequence):
         namedtype.DefaultedNamedType('certReq', univ.Boolean(False)),
         namedtype.OptionalNamedType('extensions', Extensions().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)))
     )
+
+    # if version != 1:
+    #     return PKFailureInfo("badDataFormat")
+    # if not isinstance(messageImprint, MessageImprint):
+    #     return PKFailureInfo("badDataFormat")
+    # if messageImprint.hash_algorithm != univ.ObjectIdentifier((2, 16, 840, 1, 101, 3, 4, 2, 1))   #fijarse en constants.py
+    #     return PKFailureInfo("badAlg")
+    # if messageImprint.hashed_message.lenth != 256:
+    #     return PKFailureInfo("badAlg")
+    # if extensions != NULL:  #podemos no aceptar extenciones
+    #     return PKIFailureInfo("unacceptedExtension")
+    # #if reqPolicy  in aceptedPolicies:
+    # #   return PKFailureInfo(unacceptedPolicy)
 
 # Reponse
 
@@ -176,10 +189,10 @@ class TSTInfo(univ.Sequence):
         namedtype.NamedType('messageImprint', MessageImprint()),
         # -- MUST have the same value as the similar field in
         # -- TimeStampReq
-        namedtype.NamedType('serialNumber', univ.Integer()),
+        namedtype.NamedType('serialNumber', univ.Integer()),    #serial number of the token
         # -- Time-Stamping users MUST be ready to accommodate integers
         # -- up to 160 bits.
-        namedtype.NamedType('genTime', useful.GeneralizedTime()),
+        namedtype.NamedType('genTime', useful.GeneralizedTime()),   #time of the timestamp
         namedtype.OptionalNamedType('accuracy', Accuracy()),
         namedtype.DefaultedNamedType('ordering', univ.Boolean(False)),
         namedtype.OptionalNamedType('nonce', univ.Integer()),
