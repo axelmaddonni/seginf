@@ -1,5 +1,5 @@
 from pyasn1.type import univ, namedtype, tag, namedval, constraint, char, useful
-from pyasn1_modules.rfc2459 import AlgorithmIdentifier, Extensions, MAX
+from pyasn1_modules.rfc2459 import AlgorithmIdentifier, Extensions, MAX, Name, CertificateSerialNumber, PolicyInformation
 from pyasn1_modules.rfc2315 import ContentInfo, signedData, SignedData
 from pyasn1.codec.ber import decoder
 
@@ -226,3 +226,21 @@ class TSTInfo(univ.Sequence):
 	@property
 	def message_imprint(self):
 		return self[2]
+
+class IssuerSerial(univ.Sequence):
+	componentType = namedtype.NamedTypes(
+		namedtype.NamedType('issuer',  Name()), # sha1 hash of entire  der-certificate
+		namedtype.NamedType('serialNumber', CertificateSerialNumber()),
+	) 
+
+class ESSCertID(univ.Sequence):
+	componentType = namedtype.NamedTypes(
+		namedtype.NamedType('certHash',  univ.OctetString()), # sha1 hash of entire  der-certificate
+		namedtype.OptionalNamedType('issuerSerial', IssuerSerial()),
+	)
+
+class SigningCertificate(univ.Sequence):
+	componentType = namedtype.NamedTypes(
+		namedtype.NamedType('certs', univ.SequenceOf(componentType=ESSCertID())),
+		namedtype.OptionalNamedType('policies', univ.SequenceOf(componentType=PolicyInformation())),
+	)

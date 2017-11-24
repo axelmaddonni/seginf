@@ -84,3 +84,28 @@ Seguir todos los pasos, el nombre que definan en CN (Common Name) es el que apar
 Con eso debería poder ejecutar el código de la api del usuario con el time stamp de la free TSA y firmando con el certificado auto firmado que generamos.
 
 
+=====================================================================================================
+
+
+Ejemplo de Documentación
+
+https://www.id.ee/index.php?id=36797
+https://www.sk.ee/en/services/time-stamping-service/technical-specifications/
+
+
+=====================================================================================================
+
+
+Consideraciones de la baseline policy a cubrir en la TSA:
+
+http://www.etsi.org/deliver/etsi_ts/102000_102099/102023/01.02.02_60/ts_102023v010202p.pdf
+
+
+=====================================================================================================
+
+Pruebas usando open ssl
+
+openssl ts -query -data output.pdf -no_nonce -out request.tsq
+
+openssl ts -verify -data output.pdf -queryfile request.tsq -in response.tsr
+

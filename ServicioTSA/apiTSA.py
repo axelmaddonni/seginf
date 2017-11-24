@@ -10,12 +10,18 @@ from pyasn1.codec.der import decoder
 @app.route('/tsr', methods=['POST'])
 def tsr():
 
+	# para testear
+	file_out = open('request.tsq', 'w')
+	file_out.write(request.data)
+	file_out.close()
+
 	tsa = TSA(timestamp_request=request.data)
 	response = tsa.timestamp_response()
 
-	# Para testear:
-	# tsq = decoder.decode(response, asn1Spec=classes.TimeStampResp())
-	# print(tsq)
+	# para testear
+	file_out = open('response.tsr', 'w')
+	file_out.write(response)
+	file_out.close()
 
 	return response, 200
 

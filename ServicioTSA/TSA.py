@@ -1,12 +1,33 @@
 import classes
 import constants
+import uuid
+import datetime
 
-from pyasn1.codec.der import encoder, decoder
+from pyasn1.codec.ber import encoder as ber_encoder
+from pyasn1.codec.ber import decoder as ber_decoder
+from pyasn1.codec.der import encoder as der_encoder
+from pyasn1.codec.der import decoder as der_decoder
+
+from pyasn1.type import useful, tag, univ
+
+from pyasn1_modules import rfc2315, rfc2459
+
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
+pem_data = open('cert/certificate.pem', 'r').read()
+cert = x509.load_pem_x509_certificate(pem_data, default_backend())
+
+pem_data = open('cert/key.pem', 'r').read()
+rsa_key = serialization.load_pem_private_key(pem_data, password=b"passphrase", backend=default_backend())
 
 class TSA(object):
 	def __init__(self, timestamp_request):
 		self.timestamp_request = timestamp_request
-		# self.certificate = certificate
+		self.certificate = cert
+		self.private_key = rsa_key
 
 	def verify(self):
 		verified, request = self.decode_timestamp_request(self.timestamp_request)
@@ -21,7 +42,8 @@ class TSA(object):
 		if not isinstance(request.messageImprint, classes.MessageImprint):
 			return False, classes.PKIFailureInfo("badDataFormat")
 
-		if request.messageImprint.hash_algorithm not in constants.availableHashOIDS:
+		if request.messageImprint.hash_algorithm['algorithm'] not in constants.availableHashOIDS:
+			print(request.messageImprint.hash_algorithm['algorithm'])
 			return False, classes.PKIFailureInfo("badAlg")
 
 		# TODO: Completar verificaciones
@@ -33,68 +55,195 @@ class TSA(object):
 
 		return True, None
 
+	def serial_number(self):
+		return uuid.uuid4().int
+
+	def gen_time(self):
+		return useful.GeneralizedTime().fromDateTime(datetime.datetime.now())
 
 	def timestamp_response(self):
 		verified, failureInfo = self.verify()
+
+		print(verified, str(failureInfo))
+
 		if not verified:
 			return self.error_response(failureInfo)
 
-		# TODO: Completar generación del token completando cada campo faltante a continuación
-
-		tst_info = TSTInfo()
+		# TST Info
+		tst_info = classes.TSTInfo()
 		tst_info['version'] = 1
-		tst_info['policy'] = 
+		tst_info['policy'] = constants.id_baseline_policy
 		tst_info['messageImprint'] = self.timestamp_request.messageImprint
-		tst_info['serialNumber'] = 12345
-		tst_info['genTime'] = 
+		tst_info['serialNumber'] = self.serial_number()
+		tst_info['genTime'] = self.gen_time()
 
-		# Opcionales
+		# TODO: completar nonce (obligatorio)
+		# tst_info['nonce'] =
+
+		# Opcionales? (chequear)
 		# tst_info['accuracy'] =
 		# tst_info['ordering'] =
-		# tst_info['nonce'] =
 		# tst_info['tsa'] =
 		# tst_info['extensions'] =
 
-		# Mas info sobre esto en https://stackoverflow.com/questions/28408047/message-digest-of-pdf-in-digital-signature/28429984#28429984
-		contentInfo = ContentInfo()
-		contentInfo['contentType'] = constants.id_ct_TSTInfo
-		contentInfo['content'] = self.der_encode(tst_info)
-		# Este content es el que hay que firmar casteandolo a OctetString usando el certificado
+		# Mas info sobre esto en:
+		# https://stackoverflow.com/questions/28408047/message-digest-of-pdf-in-digital-signature/28429984#28429984
 
-		# Completar mirando:
+		# ContentInfo
+		encodedContent =  der_encoder.encode(tst_info, asn1Spec=univ.OctetString())
+		contentInfo = rfc2315.ContentInfo()
+		contentInfo['contentType'] = constants.id_ct_TSTInfo
+		contentInfo['content'] = encodedContent
+
+		# Mas info:
 		# https://tools.ietf.org/html/rfc3852#section-5
 		# https://github.com/coruus/pyasn1-modules/blob/master/pyasn1_modules/rfc2315.py
 		# https://github.com/coruus/pyasn1-modules/blob/master/pyasn1_modules/rfc2459.py
-		digestAlgorithms =
-		signerInfos =
 
-		signedContent = SignedData()
+		# DigestAlgorithms
+		algorithm_identifier = rfc2459.AlgorithmIdentifier()
+		algorithm_identifier.setComponentByPosition(0, constants.id_sha1)
+		# algorithm_identifier.setComponentByPosition(1, 0x0500) # Sacado del ejemplo, no se si va
+
+		digestAlgorithms = rfc2315.DigestAlgorithmIdentifiers()
+		digestAlgorithms.setComponentByPosition(0, algorithm_identifier)
+
+		# SignerInfo
+		signerInfo = rfc2315.SignerInfo()
+		signerInfo['version'] = 1 # rfc 3852
+
+		issuer = rfc2315.IssuerAndSerialNumber()
+		issuer['issuer'] = self.cert_issuer_name()
+		issuer['serialNumber'] = self.certificate.serial_number
+		signerInfo['issuerAndSerialNumber'] = issuer
+
+		self.certificate.fingerprint(hashes.SHA256())
+		signerDigestAlgorithm = rfc2459.AlgorithmIdentifier()
+		signerDigestAlgorithm.setComponentByPosition(0, constants.id_sha256)
+		# signerDigestAlgorithm.setComponentByPosition(1, 0x0500) # Sacado del ejemplo, no se si va
+		signerInfo['digestAlgorithm'] = signerDigestAlgorithm
+
+		signerEncryptionAlgorithm = rfc2459.AlgorithmIdentifier()
+		signerEncryptionAlgorithm.setComponentByPosition(0, constants.id_rsa)
+		# signerEncryptionAlgorithm.setComponentByPosition(1, 0x0500) # Sacado del ejemplo, no se si va
+		signerInfo['digestEncryptionAlgorithm'] = signerEncryptionAlgorithm
+
+		# TODO: Compeltar SignedAttributes
+		# SignedAttributes
+		# https://tools.ietf.org/html/rfc3852#section-5.3
+		attributes = rfc2315.Attributes().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
+
+		# Content Type
+		attr_content_type = self.attr_content_type()
+		attributes.setComponentByPosition(0, attr_content_type)
+
+		# Signing time
+		attr_signing_time = self.attr_signing_time()
+		attributes.setComponentByPosition(1, attr_signing_time)
+
+		# Message digest
+		attr_message_digest = self.attr_message_digest()
+		attributes.setComponentByPosition(2, attr_message_digest)
+
+		# Signing Certificate
+		attr_signing_certificate = self.attr_signing_certificate()
+		attributes.setComponentByPosition(3, attr_signing_certificate)
+
+		signerInfo['authenticatedAttributes'] = attributes
+
+		# OPCIONAL
+		# signerInfo['unauthenticatedAttributes'] = 
+
+		# TODO: Armado de la firma
+		# Signature
+		# https://tools.ietf.org/html/rfc3852#section-5.4
+
+		# ESTO ESTA MAL PORQUE HAY SIGNED ATTRIBUTES
+		signature = self.private_key.sign(encodedContent, padding.PKCS1v15(), hashes.SHA256())
+		signerInfo['encryptedDigest'] = signature
+
+		# Solo para testear
+		# public_key = self.certificate.public_key()
+		# public_key.verify(
+		# 	bytes(signature),
+		# 	encodedContent,
+		# 	padding.PKCS1v15(),
+		# 	hashes.SHA256(),
+		# )
+
+		signerInfos = rfc2315.SignerInfos()
+		signerInfos.setComponentByPosition(0, signerInfo)
+
+		signedContent = rfc2315.SignedData().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
 		signedContent['version'] = 3
 		signedContent['digestAlgorithms'] = digestAlgorithms
 		signedContent['contentInfo'] = contentInfo
 		signedContent['signerInfos'] = signerInfos
 
+		# Certificates
 		if self.timestamp_request.certReq == True:
-			# Crear certificado auto-firmado usando módulo criptography.x509
 			# https://cryptography.io/en/latest/x509/
-			certificates = ExtendedCertificatesAndCertificates()
+			certificate, substrate = der_decoder.decode(self.certificate.public_bytes(serialization.Encoding.DER), asn1Spec=rfc2459.Certificate())
+			ext_certificate = rfc2315.ExtendedCertificateOrCertificate()
+			ext_certificate['certificate'] = certificate
+			certificates = rfc2315.ExtendedCertificatesAndCertificates().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
+			certificates.setComponentByPosition(0, ext_certificate)
 			signedContent['certificates'] = certificates
 
-		# Buscar cuando hay que completar las crls
+		# CREO QUE ES OPCIONAL
 		# signedContent['crls'] = CertificateRevocationLists()
 
+		# Token
 		token = classes.TimeStampToken()
 		token['content'] = signedContent
-		# token['contentType'] creo que no hace falta completarlo
+		token['contentType'] = rfc2315.signedData
 
+		print (str(token))
+
+		# Status
 		statusInfo = classes.PKIStatusInfo()
 		statusInfo['status'] = classes.PKIStatus('granted')
 
+		# Response
 		response = classes.TimeStampResp()
 		response['status'] = statusInfo
 		response['timeStampToken'] = token
 
-		return self.der_encode(response)
+		return self.encode_timestamp_response(response)
+
+	def attr_content_type(self):
+		return None
+
+	def attr_signing_time(self):
+		return None
+
+	def attr_message_digest(self):
+		return None
+
+	def attr_signing_certificate(self):
+		issuerSerial = classes.IssuerSerial()
+		issuerSerial['issuer'] = self.cert_issuer_name()
+		issuerSerial['serialNumber'] = self.certificate.serial_number
+
+		essCertId = classes.ESSCertID()
+		essCertId['certHash'] = self.certificate.public_bytes(serialization.Encoding.DER)
+		essCertId['issuerSerial'] = issuerSerial
+
+		essCertsIds = univ.Sequence()
+		essCertsIds.setComponentByPosition(0, essCertId)
+
+		signing_certificate = classes.SigningCertificate()
+		signing_certificate['certs'] = essCertsIds
+
+		attribute = rfc2315.Attribute()
+		attribute['type'] = constants.id_signing_certificate
+		attribute['values'] = univ.Set().setComponentByPosition(0, der_encoder.encode(signing_certificate))
+
+		return attribute
+
+	def cert_issuer_name(self):
+		issuer_name, substrate = der_decoder.decode(self.certificate.issuer.public_bytes(default_backend()), asn1Spec=rfc2459.Name())
+		return issuer_name
 
 	def error_response(self, failureInfo):
 		status = classes.PKIStatus('rejection')
@@ -106,11 +255,11 @@ class TSA(object):
 		response = classes.TimeStampResp()
 		response['status'] = statusInfo
 
-		return self.der_encode(response)
+		return self.encode_timestamp_response(response)
 
 	def decode_timestamp_request(self, request):
 		try:
-			tsq, substrate = decoder.decode(request, asn1Spec=classes.TimeStampReq())
+			tsq, substrate = der_decoder.decode(request, asn1Spec=classes.TimeStampReq())
 			if substrate:
 				return False
 			pass
@@ -118,9 +267,9 @@ class TSA(object):
 			return False
 		return True, tsq
 
-	def der_encode(self, data):
+	def encode_timestamp_response(self, response):
 		try:
-			return encoder.encode(data)
+			return der_encoder.encode(response)
 		except:
 			return self.error_response(classes.PKIFailureInfo("systemFailure"))
 
@@ -144,7 +293,7 @@ class TSA(object):
 #      algorithm=1.3.14.3.2.26
 #      parameters=0x0500
 
-# CONTENT INFO
+# CONTENT INFO
 
 #    contentInfo=ContentInfo:
 #     contentType=1.2.840.113549.1.9.16.1.4
@@ -321,19 +470,19 @@ class TSA(object):
 
 #      authenticatedAttributes=Attributes:
 #       Attribute:
-#        type=1.2.840.113549.1.9.3
+#        type=1.2.840.113549.1.9.3 # Content Type ?
 #        values=SetOf:
 #         0x060b2a864886f70d0109100104
 #       Attribute:
-#        type=1.2.840.113549.1.9.5
+#        type=1.2.840.113549.1.9.5 # Signing time
 #        values=SetOf:
 #         0x170d3137313132343032303334335a
 #       Attribute:
-#        type=1.2.840.113549.1.9.4
+#        type=1.2.840.113549.1.9.4 # Message digest
 #        values=SetOf:
 #         0x0414ee404859fddcbaec41643845b7ef7c1813f62481
 #       Attribute:
-#        type=1.2.840.113549.1.9.16.2.12
+#        type=1.2.840.113549.1.9.16.2.12 # Signing Certificate
 #        values=SetOf:
 #         0x301a301830160414916da3d860ecca82e34bc59d1793e7e968875f14
 

@@ -70,7 +70,6 @@ def check_timestamp(tst, certificate=None, digest=None, hashname=None, nonce=Non
     if nonce is not None and int(tst.tst_info['nonce']) != int(nonce):
         raise ValueError('nonce is different or missing')
 
-
     if not len(signed_data['signerInfos']):
         raise ValueError('No signature')
 
@@ -89,17 +88,17 @@ def check_timestamp(tst, certificate=None, digest=None, hashname=None, nonce=Non
     # if there is authenticated attributes, they must contain the message
     # digest and they are the signed data otherwise the content is the
     # signed data
+    signer_digest_algorithm = signer_info['digestAlgorithm']['algorithm']
+    signer_hash_class = get_hash_class_from_oid(signer_digest_algorithm)
+    signer_hash_name = get_hash_from_oid(signer_digest_algorithm)
+
     if len(signer_info['authenticatedAttributes']):
         authenticated_attributes = signer_info['authenticatedAttributes']
-        signer_digest_algorithm = signer_info['digestAlgorithm']['algorithm']
-        signer_hash_class = get_hash_class_from_oid(signer_digest_algorithm)
-        # signer_hash_class = hashlib.sha256
-        signer_hash_name = get_hash_from_oid(signer_digest_algorithm)
         content_digest = signer_hash_class(content).digest()
         for authenticated_attribute in authenticated_attributes:
             if authenticated_attribute[0] == id_attribute_messageDigest:
                 try:
-                    signed_digest = bytes(decoder.decode(bytes(authenticated_attribute[1][0]), asn1Spec=univ.OctetString())[0])
+                    signed_digest = bytes(decoder.decode(bytes(authenticated_attribute[1][0]), asn1Spec=univ.OctetString()))
                     if signed_digest != content_digest:
                         raise ValueError('Content digest != signed digest')
                     s = univ.SetOf()
@@ -119,7 +118,7 @@ def check_timestamp(tst, certificate=None, digest=None, hashname=None, nonce=Non
     signature = signer_info['encryptedDigest']
 
     backend = default_backend()
-    with open('tsa.crt', 'rb') as f:
+    with open('../ServicioTSA/cert/certificate.pem', 'r') as f:
         crt_data = f.read()
         certificate = x509.load_pem_x509_certificate(crt_data, backend)
 
@@ -127,6 +126,16 @@ def check_timestamp(tst, certificate=None, digest=None, hashname=None, nonce=Non
 
     public_key = certificate.public_key()
     hash_family = getattr(hashes, signer_hash_name.upper())
+
+    print signer_hash_name.upper()
+    print public_key
+
+    print "signature"
+    print signature
+
+    print "content"
+    print signed_data
+
     public_key.verify(
         bytes(signature),
         signed_data,
@@ -164,14 +173,16 @@ def submit():
 	# Set up the parameters we want to pass to the API.
 	# Make a get request with the parameters.
 	headers = {'Content-type': 'application/timestamp-query'}
-	http_response = requests.post("https://freetsa.org/tsr", headers=headers, data=tsq)
+	http_response = requests.post("http://0.0.0.0:12346/tsr", headers=headers, data=tsq)
 
 	tsr = http_response.content
 	tsr, substrate = decoder.decode(tsr, asn1Spec=classes.TimeStampResp())
 
-	print(tsr)
+	print(str(tsr))
+
 	token = tsr.time_stamp_token
 
+	print check_timestamp(token)
 	# UNIR TOKEN A PDF Y FIRMAR CON PADES
 	# DESCARGAR EL ARCHIVO ???
 
