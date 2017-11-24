@@ -14,8 +14,8 @@ def tsr():
 	response = tsa.timestamp_response()
 
 	# Para testear:
-	tsq = decoder.decode(response, asn1Spec=classes.TimeStampResp())
-	print(tsq)
+	# tsq = decoder.decode(response, asn1Spec=classes.TimeStampResp())
+	# print(tsq)
 
 	return response, 200
 

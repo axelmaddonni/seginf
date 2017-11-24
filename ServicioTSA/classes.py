@@ -76,6 +76,7 @@ class TimeStampReq(univ.Sequence):
 		else:
 			return None
 
+
 # Response
 
 class PKIFreeText(univ.SequenceOf):

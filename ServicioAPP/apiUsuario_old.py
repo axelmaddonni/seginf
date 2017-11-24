@@ -22,18 +22,22 @@ app = Flask(__name__)
 id_attribute_messageDigest = univ.ObjectIdentifier((1, 2, 840, 113549, 1, 9, 4))
 
 def make_timestamp_request(digest, include_tsa_certificate=False, nonce=None):
-    algorithm_identifier = rfc2459.AlgorithmIdentifier()
-    algorithm_identifier.setComponentByPosition(0, '2.16.840.1.101.3.4.2.1')
-    # OID del hash de sha256 http://oid-info.com/get/2.16.840.1.101.3.4.2.1
+	algorithm_identifier = rfc2459.AlgorithmIdentifier()
+	algorithm_identifier.setComponentByPosition(0, '2.16.840.1.101.3.4.2.1')
+	# OID del hash de sha256 http://oid-info.com/get/2.16.840.1.101.3.4.2.1
 
-    request = classes.TimeStampReq()
-    request.setComponentByPosition(0, 'v1')
+	message_imprint = classes.MessageImprint()
+	message_imprint.setComponentByPosition(0, algorithm_identifier)
+	message_imprint.setComponentByPosition(1, digest)
 
-    if nonce is not None:
-        request.setComponentByPosition(3, int(nonce))
-    request.setComponentByPosition(4, include_tsa_certificate)
+	request = classes.TimeStampReq()
+	request.setComponentByPosition(0, 'v1')
+	request.setComponentByPosition(1, message_imprint)
 
-    return request
+	if nonce is not None:
+	    request.setComponentByPosition(3, int(nonce))
+	request.setComponentByPosition(4, include_tsa_certificate)
+	return encoder.encode(request)
 
 def get_hash_oid(hashname):
     return classes.__dict__['id_' + hashname]
@@ -131,7 +135,6 @@ def check_timestamp(tst, certificate=None, digest=None, hashname=None, nonce=Non
     )
     return True
 
-
 @app.route("/")
 def main():
 	return render_template('index.html')
@@ -150,11 +153,9 @@ def submit():
 
 	# Genero el PDF de la pagina y lo hasheo 
 	pdf = pdfkit.from_url(webSite, False)
-
 	hashPdfDigest = (hashlib.sha256(pdf)).digest()
 
 	tsq = make_timestamp_request(hashPdfDigest)
-	tsq = encoder.encode(tsq)
 
 	# file_out = open('request.tsq', 'w')
 	# file_out.write(tsq)
@@ -166,13 +167,13 @@ def submit():
 	http_response = requests.post("https://freetsa.org/tsr", headers=headers, data=tsq)
 
 	tsr = http_response.content
-
 	tsr, substrate = decoder.decode(tsr, asn1Spec=classes.TimeStampResp())
 
+	print(tsr)
 	token = tsr.time_stamp_token
 
 	# UNIR TOKEN A PDF Y FIRMAR CON PADES
-	# DESCARGAR EL ARCHIVO
+	# DESCARGAR EL ARCHIVO ???
 
 	return "Alto pdf"
 
@@ -184,25 +185,3 @@ def submit():
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port = 12345, debug=True)
-
-# KRYTOENCODER
-
-# import mypdfsigner
-
-# inputPath = "output.pdf"
-# outputPath = "/tmp/example-signed-python.pdf"
-# password = "" # if non empty document will also be encrypted
-# location = "Python Location"
-# reason = "Python Reason"
-# visible = True
-# certify = True
-# timestamp = True
-# title = "Python Title"
-# author = "Python Author"
-# subject = "Python subject"
-# keywords = "Python keywords"
-# confFile = "/usr/local/mypdfsigner/tests/mypdfsigner.conf"
-
-# signResult = mypdfsigner.add_metadata_sign(inputPath, outputPath, password, location, reason, visible, certify, timestamp, title, author, subject, keywords, confFile)
-# verifyResult = mypdfsigner.verify(outputPath, confFile)
-
