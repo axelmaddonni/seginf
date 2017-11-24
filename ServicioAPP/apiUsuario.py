@@ -37,9 +37,16 @@ def submit():
 	keywords = "Python keywords"
 	confFile = "/home/axel/.mypdfsigner"
 
+	print("signing")
 	signResult = mypdfsigner.add_metadata_sign(inputPath, outputPath, password, location, reason, visible, certify, timestamp, title, author, subject, keywords, confFile)
 
+	print("signResult")
+	print(signResult)
+
 	verifyResult = mypdfsigner.verify(outputPath, confFile)
+
+	print("verifyResult")
+	print(verifyResult)
 
 	signedPdf = open("tmp/signed.pdf", 'r').read()
 	return showPdf(signedPdf, 'altopdf.pdf')
