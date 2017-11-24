@@ -3,6 +3,8 @@ from pyasn1_modules.rfc2459 import AlgorithmIdentifier, Extensions, MAX
 from pyasn1_modules.rfc2315 import ContentInfo, signedData, SignedData
 from pyasn1.codec.ber import decoder
 
+# http://snmplabs.com/pyasn1/pyasn1/contents.html#
+
 __all__ = (
 	'TimeStampReq', 'MessageImprint', 'PKIFreeText', 'PKIStatus', 'PKIFailureInfo',
 	'PKIStatusInfo', 'TimeStampResp', 'Accuracy', 'AnotherName', 'GeneralName',

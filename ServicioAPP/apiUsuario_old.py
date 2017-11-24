@@ -155,7 +155,7 @@ def submit():
 	pdf = pdfkit.from_url(webSite, False)
 	hashPdfDigest = (hashlib.sha256(pdf)).digest()
 
-	tsq = make_timestamp_request(hashPdfDigest)
+	tsq = make_timestamp_request(hashPdfDigest, include_tsa_certificate=True)
 
 	# file_out = open('request.tsq', 'w')
 	# file_out.write(tsq)
