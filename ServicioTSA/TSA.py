@@ -28,6 +28,7 @@ class TSA(object):
 		self.timestamp_request = timestamp_request
 		self.certificate = cert
 		self.private_key = rsa_key
+		self.policy = 
 
 	def verify(self):
 		verified, request = self.decode_timestamp_request(self.timestamp_request)
@@ -45,13 +46,13 @@ class TSA(object):
 		if request.messageImprint.hash_algorithm['algorithm'] not in constants.availableHashOIDS:
 			print(request.messageImprint.hash_algorithm['algorithm'])
 			return False, classes.PKIFailureInfo("badAlg")
+		
+		if request.extensions != None: #   podemos no aceptar extensiones
+			return False, PKIFailureInfo("unacceptedExtension")
 
-		# TODO: Completar verificaciones
-		# if request.extensions != NULL:#   podemos no aceptar extensiones
-			# return False, PKIFailureInfo("unacceptedExtension")
-
-		# if reqPolicy  in aceptedPolicies:
-			#return PKIFailureInfo(unacceptedPolicy)
+		if reqPolicy  != None:
+			if reqPolicy != constants.id_baseline_policy:
+				return False, PKIFailureInfo(unacceptedPolicy)
 
 		return True, None
 
@@ -77,14 +78,16 @@ class TSA(object):
 		tst_info['serialNumber'] = self.serial_number()
 		tst_info['genTime'] = self.gen_time()
 
-		# TODO: completar nonce (obligatorio)
-		# tst_info['nonce'] =
+		# DONE: completar nonce (obligatorio)
+		verified, request = self.decode_timestamp_request(self.timestamp_request)
+		if request.nonce != None:
+			tst_info['nonce'] = request.nonce
 
-		# Opcionales? (chequear)
+		# Opcionales (chequeado)
 		# tst_info['accuracy'] =
 		# tst_info['ordering'] =
 		# tst_info['tsa'] =
-		# tst_info['extensions'] =
+		## tst_info['extensions'] = #no vamos a usar extenciones
 
 		# Mas info sobre esto en:
 		# https://stackoverflow.com/questions/28408047/message-digest-of-pdf-in-digital-signature/28429984#28429984
