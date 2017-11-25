@@ -1,6 +1,7 @@
 from pyasn1.type import univ, namedtype, tag, namedval, constraint, char, useful
-from pyasn1_modules.rfc2459 import AlgorithmIdentifier, Extensions, MAX, Name, CertificateSerialNumber, PolicyInformation
-from pyasn1_modules.rfc2315 import ContentInfo, signedData, SignedData
+from pyasn1_modules.rfc3852 import ContentInfo, id_signedData, SignedData, MAX
+from pyasn1_modules.rfc3280 import AlgorithmIdentifier, Extensions, Name, CertificateSerialNumber
+from pyasn1_modules.rfc2459 import PolicyInformation
 from pyasn1.codec.ber import decoder
 
 # http://snmplabs.com/pyasn1/pyasn1/contents.html#
@@ -133,7 +134,7 @@ class PKIStatusInfo(univ.Sequence):
 
 class TimeStampToken(ContentInfo):
 	componentType = namedtype.NamedTypes(
-		namedtype.NamedType('contentType', signedData),
+		namedtype.NamedType('contentType', id_signedData),
 		namedtype.OptionalNamedType('content', SignedData().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))),
 	)
 

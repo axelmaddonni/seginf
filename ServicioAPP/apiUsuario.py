@@ -31,10 +31,10 @@ def submit():
 	visible = True
 	certify = True
 	timestamp = True
-	title = "Python Title"
-	author = "Python Author"
-	subject = "Python subject"
-	keywords = "Python keywords"
+	title = "Signed Screenshot"
+	author = first_name
+	subject = "TimeStamping"
+	keywords = "tsa"
 	confFile = "/home/axel/.mypdfsigner"
 
 	print("signing")
@@ -51,9 +51,7 @@ def submit():
 	signedPdf = open("tmp/signed.pdf", 'r').read()
 	return showPdf(signedPdf, 'altopdf.pdf')
 
-#@app.route('/descarga')
-#def descarga():
-
+# TO DO
 #@app.route('/error')
 #def error():
 
