@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, make_response
 import pdfkit
 import mypdfsigner
+import datetime
+import random
+import os
 
 app = Flask(__name__)
 
@@ -21,10 +24,15 @@ def submit():
 	webSite = request.form['webSite']
 
 	# Genero el PDF de la pagina y lo hasheo 
-	pdf = pdfkit.from_url(webSite, "tmp/output.pdf")
+	fileID = ""
+	d = datetime.datetime.now()
+	for attr in [ 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']:
+		fileID = fileID + str(getattr(d, attr)) + str(random.randint(0, 9999999))
 
-	inputPath = "tmp/output.pdf"
-	outputPath = "tmp/signed.pdf"
+	pdf = pdfkit.from_url(webSite, "tmp/screenshot" + fileID + ".pdf")
+
+	inputPath = "tmp/screenshot" + fileID + ".pdf"
+	outputPath = "tmp/signed" + fileID + ".pdf"
 	password = "" # if non empty document will also be encrypted
 	location = "Buenos Aires"
 	reason = "TSA Timestamping"
@@ -40,6 +48,9 @@ def submit():
 	print("signing")
 	signResult = mypdfsigner.add_metadata_sign(inputPath, outputPath, password, location, reason, visible, certify, timestamp, title, author, subject, keywords, confFile)
 
+	#Elimino el pdf de la screenshot para no llenar el servidor de temporales
+	#os.remove(inputPath)
+
 	print("signResult")
 	print(signResult)
 
@@ -48,8 +59,11 @@ def submit():
 	print("verifyResult")
 	print(verifyResult)
 
-	signedPdf = open("tmp/signed.pdf", 'r').read()
+	signedPdf = open(outputPath, 'r').read()
 	return showPdf(signedPdf, 'altopdf.pdf')
+
+	#Elimino el pdf de output para no llenar el servidor de temporales
+	#os.remove(outputPath)
 
 # TO DO
 #@app.route('/error')
