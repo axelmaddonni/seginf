@@ -4,6 +4,7 @@ import mypdfsigner
 import datetime
 import random
 import os
+from OpenSSL import SSL
 
 app = Flask(__name__)
 
@@ -37,13 +38,13 @@ def submit():
 	location = "Buenos Aires"
 	reason = "TSA Timestamping"
 	visible = True
-	certify = True
+	certify = False
 	timestamp = True
 	title = "Signed Screenshot"
 	author = first_name
 	subject = "TimeStamping"
 	keywords = "tsa"
-	confFile = "/home/axel/.mypdfsigner"
+	confFile = "/home/tpseginf/.mypdfsigner"
 
 	print("signing")
 	signResult = mypdfsigner.add_metadata_sign(inputPath, outputPath, password, location, reason, visible, certify, timestamp, title, author, subject, keywords, confFile)
@@ -60,14 +61,16 @@ def submit():
 	print(verifyResult)
 
 	signedPdf = open(outputPath, 'r').read()
-	return showPdf(signedPdf, 'altopdf.pdf')
 
 	#Elimino el pdf de output para no llenar el servidor de temporales
-	#os.remove(outputPath)
+	os.remove(inputPath)
+	os.remove(outputPath)
+
+	return showPdf(signedPdf, 'altopdf.pdf')
 
 # TO DO
 #@app.route('/error')
 #def error():
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port = 12345, debug=True)
+	app.run(host='0.0.0.0', port = 12345, debug=True, ssl_context=('cert/certificate.pem', 'cert/key.pem'))

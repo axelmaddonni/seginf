@@ -23,7 +23,7 @@ pem_data = open('cert/certificate.pem', 'r').read()
 cert = x509.load_pem_x509_certificate(pem_data, default_backend())
 
 pem_data = open('cert/key.pem', 'r').read()
-rsa_key = serialization.load_pem_private_key(pem_data, password=b"passphrase", backend=default_backend())
+rsa_key = serialization.load_pem_private_key(pem_data, password=b"grupoflam", backend=default_backend())
 
 class TSA(object):
 	def __init__(self, timestamp_request):

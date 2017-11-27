@@ -18,7 +18,7 @@ with open("cert/key.pem", "wb") as f:
 	f.write(key.private_bytes(
 		encoding=serialization.Encoding.PEM,
 		format=serialization.PrivateFormat.TraditionalOpenSSL,
-		encryption_algorithm=serialization.BestAvailableEncryption(b"passphrase"),
+		encryption_algorithm=serialization.BestAvailableEncryption(b"grupoflam"),
 	))
 
 # Various details about who we are. For a self-signed certificate the
