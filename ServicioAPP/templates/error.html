@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href= "{{ url_for('static',filename='styles/index.css') }}">
+</head>
+<body>
+
+  <div class="container">  
+    <div id="contact">
+      <h3>Error</h3>
+      {% if descripcion %}
+        <h4>{{descripcion}}</h4>
+      {% endif %}
+      <p class="copyright">Designed by Grupo TP2</p>
+    </div>
+  </div>
+
+</body>
+</html>

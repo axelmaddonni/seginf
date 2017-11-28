@@ -10,7 +10,7 @@ from pyasn1.codec.der import decoder as der_decoder
 
 from pyasn1.type import useful, tag, univ
 
-from pyasn1_modules import rfc3852, rfc3280
+import rfc3852, rfc3280
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -25,27 +25,24 @@ cert = x509.load_pem_x509_certificate(pem_data, default_backend())
 pem_data = open('cert/key.pem', 'r').read()
 rsa_key = serialization.load_pem_private_key(pem_data, password=b"grupoflam", backend=default_backend())
 
-class TSA(object):
+class TSATimeStamper(object):
 	def __init__(self, timestamp_request):
 		self.timestamp_request = timestamp_request
 		self.certificate = cert
 		self.private_key = rsa_key
+		self.status_code = 200
 
 	def verify(self):
 		verified, request = self.decode_timestamp_request(self.timestamp_request)
 		if not verified:
+			self.status_code = 400
 			return False, classes.PKIFailureInfo("badDataFormat")
 
 		self.timestamp_request = request
 
 		if request.version != 1:
+			self.status_code = 400
 			return False, classes.PKIFailureInfo("badDataFormat")
-
-		if not isinstance(request.messageImprint, classes.MessageImprint):
-			return False, classes.PKIFailureInfo("badDataFormat")
-
-		if request.messageImprint.hash_algorithm['algorithm'] not in constants.availableHashOIDS:
-			return False, classes.PKIFailureInfo("badAlg")
 
 		if request.extensions != None and len(request.extensions) > 0: # No aceptamos extensiones
 			return False, classes.PKIFailureInfo("unacceptedExtension")
@@ -53,6 +50,20 @@ class TSA(object):
 		if request.reqPolicy  != None:
 			if request.reqPolicy != constants.id_baseline_policy: # Unica politica aceptada
 				return False, classes.PKIFailureInfo("unacceptedPolicy")
+
+		verified, failInfo = self.checkMessageImprint(request.messageImprint)
+		if not verified:
+			return False, failInfo
+
+		return True, None
+
+	def checkMessageImprint(self, messageImprint):
+		if not isinstance(messageImprint, classes.MessageImprint):
+			self.status_code = 400
+			return False, classes.PKIFailureInfo("badDataFormat")
+
+		if messageImprint.hash_algorithm['algorithm'] not in constants.availableHashOIDS:
+			return False, classes.PKIFailureInfo("badAlg")
 
 		return True, None
 
@@ -74,18 +85,16 @@ class TSA(object):
 		tst_info['policy'] = constants.id_baseline_policy
 		tst_info['messageImprint'] = self.timestamp_request.messageImprint
 		tst_info['serialNumber'] = self.serial_number()
-		tst_info['genTime'] = self.gen_time()
+
+		try:
+			time = self.gen_time()
+		except:
+			return self.error_response(classes.PKIFailureInfo("timeNotAvailable"))
+		
+		tst_info['genTime'] = time
 
 		if self.timestamp_request.nonce != None:
 			tst_info['nonce'] = self.timestamp_request.nonce
-
-		# Opcionales (chequeado)
-		# tst_info['accuracy'] =
-		# tst_info['ordering'] =
-		# tst_info['tsa'] =
-
-		# Mas info sobre esto en:
-		# https://stackoverflow.com/questions/28408047/message-digest-of-pdf-in-digital-signature/28429984#28429984
 
 		# ContentInfo
 		encodedContent =  der_encoder.encode(tst_info)
@@ -93,11 +102,6 @@ class TSA(object):
 		contentInfo = rfc3852.EncapsulatedContentInfo()
 		contentInfo['eContentType'] = constants.id_ct_TSTInfo
 		contentInfo['eContent'] = univ.OctetString().subtype(value=encodedContent, explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))
-
-		# Mas info:
-		# https://tools.ietf.org/html/rfc3852#section-5
-		# https://github.com/coruus/pyasn1-modules/blob/master/pyasn1_modules/rfc2315.py
-		# https://github.com/coruus/pyasn1-modules/blob/master/pyasn1_modules/rfc2459.py
 
 		# DigestAlgorithm
 		algorithm_identifier = rfc3280.AlgorithmIdentifier()
@@ -130,30 +134,23 @@ class TSA(object):
 		signerInfo['signatureAlgorithm'] = signerEncryptionAlgorithm
 
 		# SignedAttributes
-		# https://tools.ietf.org/html/rfc3852#section-5.3
 		attributes = rfc3852.SignedAttributes().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))
 
 		# Content Type
 		attr_content_type = self.attr_content_type()
 		attributes.setComponentByPosition(0, attr_content_type)
 
-		# Signing time (TO DO)
-		# attr_signing_time = self.attr_signing_time()
-		# attributes.setComponentByPosition(1, attr_signing_time)
-
 		# Message digest
 		attr_message_digest = self.attr_message_digest(encodedContent)
 		attributes.setComponentByPosition(1, attr_message_digest)
 
 		# Signing Certificate
-		# https://tools.ietf.org/html/rfc2634
 		attr_signing_certificate = self.attr_signing_certificate()
 		attributes.setComponentByPosition(2, attr_signing_certificate)
 
 		signerInfo['signedAttrs'] = attributes
 
 		# Signature
-		# https://tools.ietf.org/html/rfc3852#section-5.4
 		s = univ.SetOf()
 		for i, x in enumerate(attributes):
 			s.setComponentByPosition(i, x)
@@ -161,15 +158,6 @@ class TSA(object):
 
 		signature = self.private_key.sign(signed_data, padding.PKCS1v15(), hashes.SHA1())
 		signerInfo['signature'] = signature
-
-		# Solo para testear
-		public_key = self.certificate.public_key()
-		public_key.verify(
-			bytes(signature),
-			signed_data,
-			padding.PKCS1v15(),
-			hashes.SHA1(),
-		)
 
 		signerInfos = rfc3852.SignerInfos()
 		signerInfos.setComponentByPosition(0, signerInfo)
@@ -182,7 +170,6 @@ class TSA(object):
 
 		# Certificates
 		if self.timestamp_request.certReq == True:
-			# https://cryptography.io/en/latest/x509/
 			certificate, substrate = der_decoder.decode(self.certificate.public_bytes(serialization.Encoding.DER), asn1Spec=rfc3280.Certificate())
 			ext_certificate = rfc3852.CertificateChoices()
 			ext_certificate['certificate'] = certificate
@@ -239,7 +226,7 @@ class TSA(object):
 
 		essCertId = classes.ESSCertID()
 		essCertId['certHash'] = self.certificate.public_bytes(serialization.Encoding.DER)
-		essCertId['issuerSerial'] = issuerSerial # puede omitirse(maybe)
+		essCertId['issuerSerial'] = issuerSerial
 
 		essCertsIds = univ.Sequence()
 		essCertsIds.setComponentByPosition(0, essCertId)
@@ -288,3 +275,6 @@ class TSA(object):
 			return der_encoder.encode(response)
 		except:
 			return self.error_response(classes.PKIFailureInfo("systemFailure"))
+
+	def get_status_code(self):
+		return self.status_code

@@ -1,7 +1,7 @@
 from pyasn1.type import univ, namedtype, tag, namedval, constraint, char, useful
-from pyasn1_modules.rfc3852 import ContentInfo, id_signedData, SignedData, MAX
-from pyasn1_modules.rfc3280 import AlgorithmIdentifier, Extensions, Name, CertificateSerialNumber
-from pyasn1_modules.rfc2459 import PolicyInformation
+from rfc3852 import ContentInfo, id_signedData, SignedData, MAX
+from rfc3280 import AlgorithmIdentifier, Extensions, Name, CertificateSerialNumber
+from rfc2459 import PolicyInformation
 from pyasn1.codec.ber import decoder
 
 # http://snmplabs.com/pyasn1/pyasn1/contents.html#
@@ -187,12 +187,12 @@ class AnotherName(univ.Sequence):
 class GeneralName(univ.Choice):
 	componentType = namedtype.NamedTypes(
 		namedtype.NamedType('rfc822Name', char.IA5String().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))),
-		# namedtype.NamedType('dNSName', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2))),
-		# namedtype.NamedType('x400Address', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 3))),
+		namedtype.NamedType('dNSName', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2))),
+		namedtype.NamedType('x400Address', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 3))),
 		namedtype.NamedType('directoryName', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 4))),
-		# namedtype.NamedType('ediPartyName', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 5))),
-		# namedtype.NamedType('uniformResourceIdentifier', char.IA5String().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 6))),
-		# namedtype.NamedType('iPAddress', univ.OctetString().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 7))),
+		namedtype.NamedType('ediPartyName', univ.Any().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 5))),
+		namedtype.NamedType('uniformResourceIdentifier', char.IA5String().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 6))),
+		namedtype.NamedType('iPAddress', univ.OctetString().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 7))),
 		namedtype.NamedType('registeredID', univ.ObjectIdentifier().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 8))))
 
 
@@ -230,13 +230,13 @@ class TSTInfo(univ.Sequence):
 
 class IssuerSerial(univ.Sequence):
 	componentType = namedtype.NamedTypes(
-		namedtype.NamedType('issuer',  Name()), # sha1 hash of entire  der-certificate
+		namedtype.NamedType('issuer',  Name()),
 		namedtype.NamedType('serialNumber', CertificateSerialNumber()),
 	) 
 
 class ESSCertID(univ.Sequence):
 	componentType = namedtype.NamedTypes(
-		namedtype.NamedType('certHash',  univ.OctetString()), # sha1 hash of entire  der-certificate
+		namedtype.NamedType('certHash',  univ.OctetString()),
 		namedtype.OptionalNamedType('issuerSerial', IssuerSerial()),
 	)
 

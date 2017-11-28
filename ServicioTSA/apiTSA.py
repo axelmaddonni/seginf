@@ -16,7 +16,7 @@ def tsr():
 	file_out.write(request.data)
 	file_out.close()
 
-	tsa = TSA(timestamp_request=request.data)
+	tsa = TSATimeStamper(timestamp_request=request.data)
 	response = tsa.timestamp_response()
 
 	# Para corroborar que el response sea correcto usando openssl
@@ -24,7 +24,7 @@ def tsr():
 	file_out.write(response)
 	file_out.close()
 
-	return response, 200
+	return response, tsa.get_status_code()
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', port = 12346, debug=True, ssl_context=('cert/certificate.pem', 'cert/key.pem'))

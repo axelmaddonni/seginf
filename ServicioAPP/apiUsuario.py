@@ -20,17 +20,20 @@ def main():
 
 @app.route('/submit', methods=['POST'])
 def submit():
+
 	# Agarro los datos que completo el usuario
 	first_name = request.form['nombre']
 	webSite = request.form['webSite']
-
-	# Genero el PDF de la pagina y lo hasheo 
+ 
 	fileID = ""
 	d = datetime.datetime.now()
 	for attr in [ 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']:
 		fileID = fileID + str(getattr(d, attr)) + str(random.randint(0, 9999999))
 
-	pdf = pdfkit.from_url(webSite, "tmp/screenshot" + fileID + ".pdf")
+	try: 
+		pdf = pdfkit.from_url(webSite, "tmp/screenshot" + fileID + ".pdf")
+	except: 
+		return error("URL invalida. No se pudo obtener el screenshot.")
 
 	inputPath = "tmp/screenshot" + fileID + ".pdf"
 	outputPath = "tmp/signed" + fileID + ".pdf"
@@ -46,31 +49,32 @@ def submit():
 	keywords = "tsa"
 	confFile = "/home/tpseginf/.mypdfsigner"
 
-	print("signing")
 	signResult = mypdfsigner.add_metadata_sign(inputPath, outputPath, password, location, reason, visible, certify, timestamp, title, author, subject, keywords, confFile)
 
-	#Elimino el pdf de la screenshot para no llenar el servidor de temporales
-	#os.remove(inputPath)
+	os.remove(inputPath)
 
-	print("signResult")
-	print(signResult)
+	if(signResult[0] != str(0)):
+		print("signResult")
+		print(signResult)
+		return error("Error al firmar el PDF.")
+
 
 	verifyResult = mypdfsigner.verify(outputPath, confFile)
 
-	print("verifyResult")
-	print(verifyResult)
+	if(verifyResult[0] != str(0)):
+		print("verifyResult")
+		print(verifyResult)
+		return error("Error al firmar el PDF.")
 
 	signedPdf = open(outputPath, 'r').read()
 
-	#Elimino el pdf de output para no llenar el servidor de temporales
-	os.remove(inputPath)
 	os.remove(outputPath)
 
-	return showPdf(signedPdf, 'altopdf.pdf')
+	return showPdf(signedPdf, 'SignedPDF.pdf')
 
-# TO DO
-#@app.route('/error')
-#def error():
+@app.route('/error')
+def error(descripcion=None):
+	return render_template('error.html', descripcion=descripcion)
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port = 12345, debug=True, ssl_context=('cert/certificate.pem', 'cert/key.pem'))

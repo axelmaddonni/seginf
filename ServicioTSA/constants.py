@@ -28,7 +28,6 @@ id_sha512 = univ.ObjectIdentifier((2, 16, 840, 1, 101, 3, 4, 2, 3))
 
 # Encryption algorithm
 id_rsa = univ.ObjectIdentifier((1, 2, 840, 113549, 1, 1, 1))
-# id_rsa = univ.ObjectIdentifier((1, 2, 840, 113549, 1, 1, 5))
 
 availableHashOIDS = set([id_sha1, id_sha256, id_sha384, id_sha512])
 
