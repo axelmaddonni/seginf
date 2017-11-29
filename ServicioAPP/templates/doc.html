@@ -1,0 +1,93 @@
+<html>
+
+<head>
+  <link rel="stylesheet" href= "{{ url_for('static',filename='styles/index.css') }}">
+</head>
+
+<body>
+
+<div class="container">  
+	<div id="contact">
+
+		<h3> Technical-Specifications </h3>
+
+		<p>FLAM Time-stamping is an HTTP service and time stamp requests are submitted as HTTP POST requests.</p>
+
+		<table border=2 cellpadding="1" cellspacing="1">
+			<caption>
+			<h3>&nbsp;</h3>
+			</caption>
+			<tbody>
+				<tr>
+					<td>Address of service</td>
+					<td><a href="https://0.0.0.0:12346/tsr" target="_blank">https://0.0.0.0:12346/tsr</a></td>
+				</tr>
+				<tr>
+					<td>Service certificate</td>
+					<td><a href="https://github.com/pernoctador/seginf/blob/master/ServicioTSA/cert/certificate.pem" target="_blank">FLAM TIMESTAMPING AUTHORITY</a></td>
+				</tr>
+				<tr>
+					<td>Time-stamping service policy OID</td>
+					<td>0.4.0.2023.1.1</td>
+				</tr>
+				<tr>
+					<td>Supported hash algorithms for time stamp request</td>
+					<td>SHA1, SHA256, SHA384, SHA512</td>
+				</tr>
+				<tr>
+					<td>Time stamp signing key parameter</td>
+					<td>2048bit RSA</td>
+				</tr>
+				<tr>
+					<td>Time stamp signing algorithm</td>
+					<td>SHA1withRSA</td>
+				</tr>
+				<tr>
+					<td>Time-stamping service policies supported in the request</td>
+					<td>0.4.0.2023.1.1</td>
+				</tr>
+				<tr>
+					<td>Time-stamping service extensions supported in the request</td>
+					<td>None</td>
+				</tr>
+				<tr>
+					<td>Responses to correct requests include the following</td>
+					<td>
+					<ul>
+						<li>status info &ndash; Operation Okay,</li>
+						<li>signing hash algorithm,</li>
+						<li>time stamp policy OID,</li>
+						<li>time-stamping time,</li>
+						<li>time-stamping service certificate (without a full certificate chain),</li>
+						<li>nonce value,</li>
+						<!-- <li>accuracy (0x01 seconds),</li> -->
+						<!-- <li>tsa (general name of the Time Stamp Authority - subject DN of the signing certificate)</li> -->
+					</ul>
+					</td>
+				</tr>
+				<tr>
+					<td>Responses to incorrect time stamp requests include the following</td>
+					<td>
+					<ul>
+						<li>status info&nbsp;&ndash; Rejected,</li>
+						<li>cause of error</li>
+					</ul>
+					</td>
+				</tr>
+				<tr>
+					<td>Response, if not a time stamp request</td>
+					<td>HTTP status code: 400 &ndash; Bad Request</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<h3>&nbsp;</h3>
+
+		<center><input type="submit" value="Back" onclick='window.location="{{ url_for('main') }}";' /></center>
+		<p class="copyright">Designed by Grupo TP2</p>
+
+	</div>
+</div>
+
+</body>
+</html>

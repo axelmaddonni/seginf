@@ -76,5 +76,9 @@ def submit():
 def error(descripcion=None):
 	return render_template('error.html', descripcion=descripcion)
 
+@app.route('/doc')
+def doc(descripcion=None):
+	return render_template('doc.html')
+
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', port = 12345, debug=True, ssl_context=('cert/certificate.pem', 'cert/key.pem'))
