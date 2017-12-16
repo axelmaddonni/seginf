@@ -105,7 +105,7 @@ class TSATimeStamper(object):
 
 		# DigestAlgorithm
 		algorithm_identifier = rfc3280.AlgorithmIdentifier()
-		algorithm_identifier.setComponentByPosition(0, constants.id_sha1)
+		algorithm_identifier.setComponentByPosition(0, constants.id_sha256)
 		algorithm_identifier.setComponentByPosition(1, univ.Null(''))
 
 		digestAlgorithms = rfc3852.DigestAlgorithmIdentifiers()
@@ -124,7 +124,7 @@ class TSATimeStamper(object):
 		signerInfo['sid'] = sid
 
 		signerDigestAlgorithm = rfc3280.AlgorithmIdentifier()
-		signerDigestAlgorithm.setComponentByPosition(0, constants.id_sha1)
+		signerDigestAlgorithm.setComponentByPosition(0, constants.id_sha256)
 		signerDigestAlgorithm.setComponentByPosition(1, univ.Null(''))
 		signerInfo['digestAlgorithm'] = signerDigestAlgorithm
 
@@ -156,7 +156,7 @@ class TSATimeStamper(object):
 			s.setComponentByPosition(i, x)
 		signed_data = der_encoder.encode(s)
 
-		signature = self.private_key.sign(signed_data, padding.PKCS1v15(), hashes.SHA1())
+		signature = self.private_key.sign(signed_data, padding.PKCS1v15(), hashes.SHA256())
 		signerInfo['signature'] = signature
 
 		signerInfos = rfc3852.SignerInfos()
@@ -211,7 +211,7 @@ class TSATimeStamper(object):
 		attribute = rfc3852.Attribute()
 		attribute['attrType'] = constants.id_message_digest
 
-		contentDigest = hashlib.sha1(content).digest()
+		contentDigest = hashlib.sha256(content).digest()
 
 		values = univ.Set()
 		values.setComponentByPosition(0, univ.OctetString(contentDigest))
